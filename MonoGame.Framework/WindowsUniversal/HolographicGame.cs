@@ -41,11 +41,21 @@ namespace MonoGame.Framework
             if (game.graphicsDeviceManager == null)
                 throw new NullReferenceException("You must create the GraphicsDeviceManager in the Game constructor!");
 
+            game.graphicsDeviceManager.PreparingDeviceSettings += (object _sender, PreparingDeviceSettingsEventArgs _e) =>
+            {
+                //_e.GraphicsDeviceInformation.Adapter;
+                // TODO: select a holographic adapter by LUID 
+            };
+
+            game.graphicsDeviceManager.ApplyChanges();
+
             // Start running the game.
             game.Run(GameRunBehavior.Asynchronous);
 
             // Return the created game object.
             return game;
-        }
+        }   
+
+        
     }
 }

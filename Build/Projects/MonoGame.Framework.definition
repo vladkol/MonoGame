@@ -1380,6 +1380,18 @@
     <Compile Include="WindowsUniversal\XamlGame.cs">
       <Platforms>WindowsUniversal</Platforms>
     </Compile>
+    <Compile Include="WindowsUniversal\HolographicGamePlatform.cs">
+      <Platforms>WindowsUniversal</Platforms>
+    </Compile>
+    <Compile Include="WindowsUniversal\HolographicGameWindow.cs">
+      <Platforms>WindowsUniversal</Platforms>
+    </Compile>
+    <Compile Include="WindowsUniversal\HolographicGame.cs">
+      <Platforms>WindowsUniversal</Platforms>
+    </Compile>
+    <Compile Include="WindowsUniversal\HolographicDXInterop.cs">
+      <Platforms>WindowsUniversal</Platforms>
+    </Compile>
 
 
     <!-- Windows Desktop Platfom -->

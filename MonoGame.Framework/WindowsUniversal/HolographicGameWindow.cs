@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -198,3 +199,26 @@ namespace Microsoft.Xna.Framework.WindowsUniversal
         #endregion
     }
 }
+
+namespace Microsoft.Xna.Framework.Graphics
+{
+    partial class GraphicsAdapter
+    {
+        [CLSCompliant(false)]
+        public ulong LUID
+        {
+            get
+            {
+                ulong luid = 0;
+                IntPtr adapterPtr = IntPtr.Zero;
+                _adapter.QueryInterface(typeof(Microsoft.Xna.Framework.WindowsUniversal.IDxgiAdapter).GetTypeInfo().GUID, out adapterPtr);
+                if(adapterPtr != IntPtr.Zero)
+                {
+                    luid = (Marshal.GetObjectForIUnknown(adapterPtr) as Microsoft.Xna.Framework.WindowsUniversal.IDxgiAdapter).GetDesc().AdapterLuid;
+                }
+                return luid;
+            }
+        }
+    }
+}
+
