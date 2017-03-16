@@ -136,6 +136,35 @@ namespace Microsoft.Xna.Framework
             SetCursor(false);
         }
 
+        // non-XAML-based window (CoreWindow only)
+        public void Initialize(CoreWindow coreWindow, TouchQueue touchQueue, bool isHolographic)
+        {
+            _coreWindow = coreWindow;
+            _inputEvents = new InputEvents(_coreWindow, null, touchQueue);
+
+            _dinfo = DisplayInformation.GetForCurrentView();
+            _appView = ApplicationView.GetForCurrentView();
+
+            _coreWindow.Closed += Window_Closed;
+            _coreWindow.Activated += Window_FocusChanged;
+            _coreWindow.SizeChanged += CoreWindow_SizeChanged;
+
+            SetViewBounds(_appView.VisibleBounds.Width, _appView.VisibleBounds.Height);
+
+            SetCursor(false);
+        }
+
+        private void CoreWindow_SizeChanged(CoreWindow sender, WindowSizeChangedEventArgs args)
+        {
+            lock (_eventLocker)
+            {
+                var pixelWidth = Math.Max(1, (int)Math.Round(args.Size.Width * _dinfo.RawPixelsPerViewPixel));
+                var pixelHeight = Math.Max(1, (int)Math.Round(args.Size.Height * _dinfo.RawPixelsPerViewPixel));
+                _newViewBounds = new Rectangle(0, 0, pixelWidth, pixelHeight);
+                _isSizeChanged = true;
+            }
+        }
+
         private void Window_FocusChanged(CoreWindow sender, WindowActivatedEventArgs args)
         {
             lock (_eventLocker)

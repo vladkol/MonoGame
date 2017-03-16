@@ -10,11 +10,11 @@ using Windows.UI.Core;
 namespace MonoGame.Framework
 {
     /// <summary>
-    /// Static class for initializing a Game object for a Windows Mixed Reality application.
+    /// Static class for initializing a Game object for a Universal Windows Platform non-XAML application.
     /// </summary>
     /// <typeparam name="T">A class derived from Game.</typeparam>
     [CLSCompliant(false)]
-    public class HolographicGame<T>
+    public class UWPGame<T>
         where T : Game, new()
     {
         /// <summary>
@@ -22,20 +22,22 @@ namespace MonoGame.Framework
         /// </summary>
         /// <param name="launchParameters">The command line arguments from launch.</param>
         /// <param name="window">The core window object.</param>
+        /// <param name="isHolographic">Use Windows Holographic device</param>
         /// <returns></returns>
-        static public T Create(string launchParameters, CoreWindow window)
+        static public T Create(string launchParameters, CoreWindow window, bool isHolographic)
         {
             if (window == null)
                 throw new NullReferenceException("The window cannot be null!");
 
             // Save any launch parameters to be parsed by the platform.
-            HolographicGamePlatform.LaunchParameters = launchParameters != null ? launchParameters : string.Empty;
+            UAPGamePlatform.LaunchParameters = launchParameters != null ? launchParameters : string.Empty;
 
             // Setup the window class.
-            HolographicGameWindow.Instance.Initialize(window);
+            UAPGameWindow.Instance.Initialize(window, UAPGamePlatform.TouchQueue, isHolographic);
 
             // Construct the game.
             var game = new T();
+            game.IsFixedTimeStep = false;
 
             // Set the swap chain panel on the graphics mananger.
             if (game.graphicsDeviceManager == null)
@@ -43,8 +45,13 @@ namespace MonoGame.Framework
 
             game.graphicsDeviceManager.PreparingDeviceSettings += (object _sender, PreparingDeviceSettingsEventArgs _e) =>
             {
-                //_e.GraphicsDeviceInformation.Adapter;
-                // TODO: select a holographic adapter by LUID 
+                if(game.LaunchParameters.ContainsKey("HolographicAdapter"))
+                {
+                    ulong adapterLUID = ulong.Parse(game.LaunchParameters["HolographicAdapter"]);
+                    _e.GraphicsDeviceInformation.Adapter = Microsoft.Xna.Framework.Graphics.GraphicsAdapter.Adapters.Where(adapter => adapter.LUID == adapterLUID).First();
+                }
+                _e.GraphicsDeviceInformation.GraphicsProfile = Microsoft.Xna.Framework.Graphics.GraphicsProfile.HiDef;
+
             };
 
             game.graphicsDeviceManager.ApplyChanges();

@@ -1,8 +1,26 @@
 ﻿using System;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Xna.Framework.WindowsUniversal
 {
+    internal class DXUtils
+    {
+        internal static bool SdkLayersAvailable()
+        {
+            try
+            {
+                using (var device = new SharpDX.Direct3D11.Device(SharpDX.Direct3D.DriverType.Null, SharpDX.Direct3D11.DeviceCreationFlags.Debug))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
     /// <summary>
     /// Describes an adapter (or video card) by using DXGI 1.0.
     /// </summary>
@@ -288,4 +306,21 @@ namespace Microsoft.Xna.Framework.WindowsUniversal
             [Out] out long umdVersion);
     }
 
+}
+
+
+
+namespace Microsoft.Xna.Framework.Graphics
+{
+    partial class GraphicsAdapter
+    {
+        [CLSCompliant(false)]
+        public ulong LUID
+        {
+            get
+            {
+                return (ulong)_adapter.Description1.Luid;
+            }
+        }
+    }
 }

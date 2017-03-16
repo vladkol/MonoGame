@@ -1380,16 +1380,13 @@
     <Compile Include="WindowsUniversal\XamlGame.cs">
       <Platforms>WindowsUniversal</Platforms>
     </Compile>
-    <Compile Include="WindowsUniversal\HolographicGamePlatform.cs">
-      <Platforms>WindowsUniversal</Platforms>
-    </Compile>
-    <Compile Include="WindowsUniversal\HolographicGameWindow.cs">
-      <Platforms>WindowsUniversal</Platforms>
-    </Compile>
-    <Compile Include="WindowsUniversal\HolographicGame.cs">
+    <Compile Include="WindowsUniversal\UWPGame.cs">
       <Platforms>WindowsUniversal</Platforms>
     </Compile>
     <Compile Include="WindowsUniversal\HolographicDXInterop.cs">
+      <Platforms>WindowsUniversal</Platforms>
+    </Compile>
+    <Compile Include="WindowsUniversal\GraphicsDeviceManager.Holographic.cs">
       <Platforms>WindowsUniversal</Platforms>
     </Compile>
 

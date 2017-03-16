@@ -26,7 +26,7 @@ namespace Microsoft.Xna.Framework
         {
 #if WINDOWS_UAP
 
-            presentationParameters.DeviceWindowHandle = IntPtr.Zero;
+            presentationParameters.DeviceWindowHandle = presentationParameters.DeviceWindowHandle;
             presentationParameters.SwapChainPanel = this.SwapChainPanel;
 
 #elif WINDOWS_STOREAPP

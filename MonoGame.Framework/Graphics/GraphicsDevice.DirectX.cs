@@ -263,7 +263,8 @@ namespace Microsoft.Xna.Framework.Graphics
             // Windows requires BGRA support out of DX.
             var creationFlags = SharpDX.Direct3D11.DeviceCreationFlags.BgraSupport;
 #if DEBUG
-            creationFlags |= SharpDX.Direct3D11.DeviceCreationFlags.Debug;
+            if(WindowsUniversal.DXUtils.SdkLayersAvailable())
+                creationFlags |= SharpDX.Direct3D11.DeviceCreationFlags.Debug;
 #endif
 
             // Pass the preferred feature levels based on the
@@ -350,11 +351,11 @@ namespace Microsoft.Xna.Framework.Graphics
             // We need presentation parameters to continue here.
             if (    PresentationParameters == null ||
 #if WINDOWS_UAP
-					PresentationParameters.SwapChainPanel == null)
+                    PresentationParameters.DeviceWindowHandle == IntPtr.Zero && PresentationParameters.SwapChainPanel == null)
 #else
 					(PresentationParameters.DeviceWindowHandle == IntPtr.Zero && PresentationParameters.SwapChainBackgroundPanel == null))
 #endif
-			{
+            {
                 if (_swapChain != null)
                 {
                     _swapChain.Dispose();
@@ -442,13 +443,14 @@ namespace Microsoft.Xna.Framework.Graphics
                 using (var dxgiAdapter = dxgiDevice2.Adapter)
                 using (var dxgiFactory2 = dxgiAdapter.GetParent<SharpDX.DXGI.Factory2>())
                 {
-                    if (PresentationParameters.DeviceWindowHandle != IntPtr.Zero)
+                    // Only use Window if it is not XAML-based
+                    if (PresentationParameters.DeviceWindowHandle != IntPtr.Zero && PresentationParameters.SwapChainPanel == null)
                     {
                         // Creates a SwapChain from a CoreWindow pointer.
                         var coreWindow = Marshal.GetObjectForIUnknown(PresentationParameters.DeviceWindowHandle) as CoreWindow;
                         using (var comWindow = new ComObject(coreWindow))
 #if WINDOWS_PHONE81 || WINDOWS_UAP || WINRT
-                           _swapChain = new SwapChain1(dxgiFactory2, dxgiDevice2, comWindow, ref desc);
+                            _swapChain = new SwapChain1(dxgiFactory2, dxgiDevice2, comWindow, ref desc);
 #else
                            _swapChain = dxgiFactory2.CreateSwapChainForCoreWindow(_d3dDevice, comWindow, ref desc, null);
 #endif
@@ -489,14 +491,17 @@ namespace Microsoft.Xna.Framework.Graphics
 #if WINDOWS_UAP
             // Counter act the composition scale of the render target as 
             // we already handle this in the platform window code. 
-            var asyncResult = PresentationParameters.SwapChainPanel.Dispatcher.RunIdleAsync( (e) =>
-            {   
-                var inverseScale = new RawMatrix3x2();
-                inverseScale.M11 = 1.0f / PresentationParameters.SwapChainPanel.CompositionScaleX;
-                inverseScale.M22 = 1.0f / PresentationParameters.SwapChainPanel.CompositionScaleY;
-                using (var swapChain2 = _swapChain.QueryInterface<SwapChain2>())
-                    swapChain2.MatrixTransform = inverseScale;
-            });
+            if (PresentationParameters.SwapChainPanel != null)
+            {
+                var asyncResult = PresentationParameters.SwapChainPanel.Dispatcher.RunIdleAsync((e) =>
+               {
+                   var inverseScale = new RawMatrix3x2();
+                   inverseScale.M11 = 1.0f / PresentationParameters.SwapChainPanel.CompositionScaleX;
+                   inverseScale.M22 = 1.0f / PresentationParameters.SwapChainPanel.CompositionScaleY;
+                   using (var swapChain2 = _swapChain.QueryInterface<SwapChain2>())
+                       swapChain2.MatrixTransform = inverseScale;
+               });
+            }
 #endif
 
             // Obtain the backbuffer for this window which will be the final 3D rendertarget.
@@ -576,8 +581,8 @@ namespace Microsoft.Xna.Framework.Graphics
         partial void PlatformValidatePresentationParameters(PresentationParameters presentationParameters)
         {
 #if WINDOWS_UAP
-            if (presentationParameters.SwapChainPanel == null)
-                throw new ArgumentException("PresentationParameters.SwapChainPanel must not be null.");
+            if (presentationParameters.DeviceWindowHandle == IntPtr.Zero && presentationParameters.SwapChainPanel == null)
+                throw new ArgumentException("Either presentationParameters.DeviceWindowHandle or PresentationParameters.SwapChainPanel must not be null.");
 #elif WINDOWS_STOREAPP
             if (presentationParameters.DeviceWindowHandle == IntPtr.Zero && presentationParameters.SwapChainBackgroundPanel == null)
                 throw new ArgumentException("PresentationParameters.DeviceWindowHandle or PresentationParameters.SwapChainBackgroundPanel must be not null.");
