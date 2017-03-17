@@ -72,6 +72,11 @@ namespace Microsoft.Xna.Framework
             get { return _orientation; }
         }
 
+        public bool IsHolographic
+        {
+            get; private set;
+        }
+
         private UAPGamePlatform Platform { get { return Game.Instance.Platform as UAPGamePlatform; } }
 
         protected internal override void SetSupportedOrientations(DisplayOrientation orientations)
@@ -139,6 +144,8 @@ namespace Microsoft.Xna.Framework
         // non-XAML-based window (CoreWindow only)
         public void Initialize(CoreWindow coreWindow, TouchQueue touchQueue, bool isHolographic)
         {
+            IsHolographic = isHolographic;
+
             _coreWindow = coreWindow;
             _inputEvents = new InputEvents(_coreWindow, null, touchQueue);
 

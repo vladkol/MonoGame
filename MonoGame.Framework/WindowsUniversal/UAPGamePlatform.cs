@@ -20,6 +20,8 @@ using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml;
 using Windows.UI.Core;
 using Microsoft.Xna.Framework.Input;
+using Windows.Perception.Spatial;
+using System.Numerics;
 
 namespace Microsoft.Xna.Framework
 {
@@ -128,6 +130,10 @@ namespace Microsoft.Xna.Framework
 
         public override void RunLoop()
         {
+            if(UAPGameWindow.Instance.IsHolographic)
+            {
+                UAPGameWindow.Instance.Game.graphicsDeviceManager.SpatialReferenceFrame = SpatialLocator.GetDefault().CreateStationaryFrameOfReferenceAtCurrentLocation();
+            }
             UAPGameWindow.Instance.RunLoop();
         }
 
@@ -156,6 +162,32 @@ namespace Microsoft.Xna.Framework
         public override bool BeforeUpdate(GameTime gameTime)
         {
             TouchQueue.ProcessQueued();
+
+            if (UAPGameWindow.Instance.IsHolographic)
+            {
+                var space = UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicSpace;
+                var frame = space.CreateNextFrame();
+                if (frame != null)
+                {
+                    UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicFrame = frame;
+                    frame.UpdateCurrentPrediction();
+
+                    if(frame.CurrentPrediction.CameraPoses.Count > 0)
+                    {
+                        var pose = frame.CurrentPrediction.CameraPoses[0];
+                        UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicCameraPose = pose;
+
+                        if (UAPGameWindow.Instance.Game.graphicsDeviceManager.SpatialReferenceFrame != null)
+                        {
+                            var transform = pose.TryGetViewTransform(UAPGameWindow.Instance.Game.graphicsDeviceManager.SpatialReferenceFrame.CoordinateSystem);
+                            if (transform.HasValue)
+                                UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicStereoTransform = transform.Value;
+                        }
+                    }
+                }
+            }
+
+
             return true;
         }
 
@@ -169,6 +201,19 @@ namespace Microsoft.Xna.Framework
 				// 
 				// I guess the OS changes it and doesn't restore it?
 				device.ResetRenderTargets();
+
+                if (UAPGameWindow.Instance.IsHolographic && UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicFrame != null)
+                {
+                    var space = UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicSpace;
+                    var pose = UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicCameraPose;
+                    var renderingParams = pose != null ? UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicFrame.GetRenderingParameters(pose) : null;
+
+                    if (renderingParams != null && UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicFocusPoint != null)
+                    {
+                        renderingParams.SetFocusPoint(UAPGameWindow.Instance.Game.graphicsDeviceManager.SpatialReferenceFrame.CoordinateSystem,
+                            UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicFocusPoint);
+                    }
+                }
             }
 
             return true;

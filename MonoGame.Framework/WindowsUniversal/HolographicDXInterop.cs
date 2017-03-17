@@ -20,6 +20,20 @@ namespace Microsoft.Xna.Framework.WindowsUniversal
                 return false;
             }
         }
+
+        [DllImport(
+            "d3d11.dll",
+            EntryPoint = "CreateDirect3D11DeviceFromDXGIDevice",
+            SetLastError = true,
+            CharSet = CharSet.Unicode,
+            ExactSpelling = true,
+            CallingConvention = CallingConvention.StdCall
+            )]
+        internal static extern UInt32 CreateDirect3D11DeviceFromDXGIDevice(IntPtr dxgiDevice, out IntPtr graphicsDevice);
+
+        internal static Guid ID3D11Resource = new Guid("dc8e63f3-d12b-4952-b47b-5e45026a862d");
+        internal static Guid IDXGISurface = new Guid("cafcb56c-6ac3-4889-bf47-9e23bbd260ec");
+        internal static Guid IDXGISurface1 = new Guid("4AE63092-6327-4c1b-80AE-BFE12EA32B86");
     }
     /// <summary>
     /// Describes an adapter (or video card) by using DXGI 1.0.
@@ -306,6 +320,15 @@ namespace Microsoft.Xna.Framework.WindowsUniversal
             [Out] out long umdVersion);
     }
 
+
+    [ComImport]
+    [Guid("A9B3D012-3DF2-4EE3-B8D1-8695F457D3C1")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [ComVisible(true)]
+    public interface IDirect3DDxgiInterfaceAccess : IDisposable
+    {
+        IntPtr GetInterface([In] ref Guid iid);
+    };
 }
 
 

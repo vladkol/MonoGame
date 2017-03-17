@@ -2,9 +2,11 @@
 using Microsoft.Xna.Framework.WindowsUniversal;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Windows.Graphics.Holographic;
 using Windows.UI.Core;
 
 namespace MonoGame.Framework
@@ -22,9 +24,9 @@ namespace MonoGame.Framework
         /// </summary>
         /// <param name="launchParameters">The command line arguments from launch.</param>
         /// <param name="window">The core window object.</param>
-        /// <param name="isHolographic">Use Windows Holographic device</param>
+        /// <param name="holographicSpace">Windows Holographic space if using</param>
         /// <returns></returns>
-        static public T Create(string launchParameters, CoreWindow window, bool isHolographic)
+        static public T Create(string launchParameters, CoreWindow window, HolographicSpace holographicSpace)
         {
             if (window == null)
                 throw new NullReferenceException("The window cannot be null!");
@@ -33,7 +35,7 @@ namespace MonoGame.Framework
             UAPGamePlatform.LaunchParameters = launchParameters != null ? launchParameters : string.Empty;
 
             // Setup the window class.
-            UAPGameWindow.Instance.Initialize(window, UAPGamePlatform.TouchQueue, isHolographic);
+            UAPGameWindow.Instance.Initialize(window, UAPGamePlatform.TouchQueue, holographicSpace != null);
 
             // Construct the game.
             var game = new T();
@@ -43,21 +45,23 @@ namespace MonoGame.Framework
             if (game.graphicsDeviceManager == null)
                 throw new NullReferenceException("You must create the GraphicsDeviceManager in the Game constructor!");
 
+            game.graphicsDeviceManager.HolographicSpace = holographicSpace;
+            game.graphicsDeviceManager.GraphicsProfile = Microsoft.Xna.Framework.Graphics.GraphicsProfile.HiDef;
+
             game.graphicsDeviceManager.PreparingDeviceSettings += (object _sender, PreparingDeviceSettingsEventArgs _e) =>
             {
-                if(game.LaunchParameters.ContainsKey("HolographicAdapter"))
+                if (holographicSpace != null)
                 {
-                    ulong adapterLUID = ulong.Parse(game.LaunchParameters["HolographicAdapter"]);
+                    int shiftPos = sizeof(uint);
+                    ulong adapterLUID = (ulong)holographicSpace.PrimaryAdapterId.LowPart | (((ulong)holographicSpace.PrimaryAdapterId.HighPart) << shiftPos);
                     _e.GraphicsDeviceInformation.Adapter = Microsoft.Xna.Framework.Graphics.GraphicsAdapter.Adapters.Where(adapter => adapter.LUID == adapterLUID).First();
                 }
-                _e.GraphicsDeviceInformation.GraphicsProfile = Microsoft.Xna.Framework.Graphics.GraphicsProfile.HiDef;
-
             };
 
-            game.graphicsDeviceManager.ApplyChanges();
+            //game.graphicsDeviceManager.ApplyChanges();
 
             // Start running the game.
-            game.Run(GameRunBehavior.Asynchronous);
+            //game.Run(GameRunBehavior.Asynchronous);
 
             // Return the created game object.
             return game;

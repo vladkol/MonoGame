@@ -394,6 +394,7 @@ namespace Microsoft.Xna.Framework.Graphics
             var format = PresentationParameters.BackBufferFormat == SurfaceFormat.Color ? 
                             SharpDX.DXGI.Format.B8G8R8A8_UNorm : 
                             SharpDXHelper.ToFormat(PresentationParameters.BackBufferFormat);
+            Point targetSize = new Point(0,0);
 
             // If the swap chain already exists... update it.
             if (_swapChain != null)
@@ -413,7 +414,48 @@ namespace Microsoft.Xna.Framework.Graphics
                 });
 #endif
             }
+#if WINDOWS_UAP
+            else if (UAPGameWindow.Instance.IsHolographic)
+            {
+                var coreWindow = Marshal.GetObjectForIUnknown(PresentationParameters.DeviceWindowHandle) as CoreWindow;
+                var space = UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicSpace;
 
+                Windows.Graphics.DirectX.Direct3D11.IDirect3DDevice id3dd;
+                IntPtr pUnknown;
+                using (var dxgiDevice = _d3dDevice.QueryInterface<SharpDX.DXGI.Device3>())
+                {
+                    UInt32 hr = WindowsUniversal.DXUtils.CreateDirect3D11DeviceFromDXGIDevice(dxgiDevice.NativePointer, out pUnknown);
+                    if (hr == 0)
+                    {
+                        id3dd = (Windows.Graphics.DirectX.Direct3D11.IDirect3DDevice)Marshal.GetObjectForIUnknown(pUnknown);
+                        Marshal.Release(pUnknown);
+
+                        space.SetDirect3D11Device(id3dd);
+                    }
+                }
+
+                // now getting a camera
+                var frame = space.CreateNextFrame();
+                frame.UpdateCurrentPrediction();
+                var pose = frame.CurrentPrediction.CameraPoses.First();
+                var camera = pose.HolographicCamera;
+                var renderingParameters = frame.GetRenderingParameters(pose);
+
+                // Get the WinRT object representing the holographic camera's back buffer.
+                Windows.Graphics.DirectX.Direct3D11.IDirect3DSurface surface = renderingParameters.Direct3D11BackBuffer;
+
+                // Get a DXGI interface for the holographic camera's back buffer.
+                // Holographic cameras do not provide the DXGI swap chain, which is owned
+                // by the system. The Direct3D back buffer resource is provided using WinRT
+                // interop APIs.
+                WindowsUniversal.IDirect3DDxgiInterfaceAccess surfaceDxgiInterfaceAccess = surface as WindowsUniversal.IDirect3DDxgiInterfaceAccess;
+                IntPtr pResource = surfaceDxgiInterfaceAccess.GetInterface(WindowsUniversal.DXUtils.ID3D11Resource);
+                SharpDX.Direct3D11.Texture2D d3dBackBuffer = new SharpDX.Direct3D11.Texture2D(pResource);
+                _renderTargetView = new RenderTargetView(_d3dDevice, d3dBackBuffer);
+                targetSize.X = d3dBackBuffer.Description.Width;
+                targetSize.Y = d3dBackBuffer.Description.Height;
+            }
+#endif
             // Otherwise, create a new swap chain.
             else
             {
@@ -486,7 +528,8 @@ namespace Microsoft.Xna.Framework.Graphics
                 }
             }
 
-            _swapChain.Rotation = SharpDX.DXGI.DisplayModeRotation.Identity;
+            if(_swapChain != null)
+                _swapChain.Rotation = SharpDX.DXGI.DisplayModeRotation.Identity;
 
 #if WINDOWS_UAP
             // Counter act the composition scale of the render target as 
@@ -504,16 +547,18 @@ namespace Microsoft.Xna.Framework.Graphics
             }
 #endif
 
-            // Obtain the backbuffer for this window which will be the final 3D rendertarget.
-            Point targetSize;
-            using (var backBuffer = SharpDX.Direct3D11.Texture2D.FromSwapChain<SharpDX.Direct3D11.Texture2D>(_swapChain, 0))
+            if (_swapChain != null)
             {
-                // Create a view interface on the rendertarget to use on bind.
-                _renderTargetView = new SharpDX.Direct3D11.RenderTargetView(_d3dDevice, backBuffer);
+                // Obtain the backbuffer for this window which will be the final 3D rendertarget.
+                using (var backBuffer = SharpDX.Direct3D11.Texture2D.FromSwapChain<SharpDX.Direct3D11.Texture2D>(_swapChain, 0))
+                {
+                    // Create a view interface on the rendertarget to use on bind.
+                    _renderTargetView = new SharpDX.Direct3D11.RenderTargetView(_d3dDevice, backBuffer);
 
-                // Get the rendertarget dimensions for later.
-                var backBufferDesc = backBuffer.Description;
-                targetSize = new Point(backBufferDesc.Width, backBufferDesc.Height);
+                    // Get the rendertarget dimensions for later.
+                    var backBufferDesc = backBuffer.Description;
+                    targetSize = new Point(backBufferDesc.Width, backBufferDesc.Height);
+                }
             }
 
             // Create the depth buffer if we need it.
@@ -556,11 +601,37 @@ namespace Microsoft.Xna.Framework.Graphics
                 new SharpDX.Direct2D1.PixelFormat(format, SharpDX.Direct2D1.AlphaMode.Premultiplied),
                 _dpi, _dpi,
                 SharpDX.Direct2D1.BitmapOptions.Target | SharpDX.Direct2D1.BitmapOptions.CannotDraw);
-            
+
             // Direct2D needs the dxgi version of the backbuffer surface pointer.
             // Get a D2D surface from the DXGI back buffer to use as the D2D render target.
-            using (var dxgiBackBuffer = _swapChain.GetBackBuffer<SharpDX.DXGI.Surface>(0))
+            if (_swapChain != null)
+            {
+                using (var dxgiBackBuffer = _swapChain.GetBackBuffer<SharpDX.DXGI.Surface>(0))
+                    _bitmapTarget = new SharpDX.Direct2D1.Bitmap1(_d2dContext, dxgiBackBuffer, bitmapProperties);
+            }
+            else if(UAPGameWindow.Instance.IsHolographic)
+            {
+                var space = UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicSpace;
+                var frame = space.CreateNextFrame();
+                frame.UpdateCurrentPrediction();
+                var pose = frame.CurrentPrediction.CameraPoses.First();
+                var camera = pose.HolographicCamera;
+                var renderingParameters = frame.GetRenderingParameters(pose);
+
+                Windows.Graphics.DirectX.Direct3D11.IDirect3DSurface surface = renderingParameters.Direct3D11BackBuffer;
+
+                WindowsUniversal.IDirect3DDxgiInterfaceAccess surfaceDxgiInterfaceAccess = surface as WindowsUniversal.IDirect3DDxgiInterfaceAccess;
+                IntPtr pResource = surfaceDxgiInterfaceAccess.GetInterface(WindowsUniversal.DXUtils.ID3D11Resource);
+
+                SharpDX.Direct2D1.RenderTarget tt = new SharpDX.Direct2D1.RenderTarget()
+                SharpDX.Direct2D1.BitmapRenderTarget rt = new SharpDX.Direct2D1.BitmapRenderTarget();
+
+                IntPtr pSurface = IntPtr.Zero;
+                Marshal.QueryInterface(pResource, ref WindowsUniversal.DXUtils.IDXGISurface, out pSurface);
+
+                SharpDX.DXGI.Surface dxgiBackBuffer = new Surface(Marshal.GetIUnknownForObject(pSurface));
                 _bitmapTarget = new SharpDX.Direct2D1.Bitmap1(_d2dContext, dxgiBackBuffer, bitmapProperties);
+            }
 
             // So now we can set the Direct2D render target.
             _d2dContext.Target = _bitmapTarget;
@@ -964,7 +1035,16 @@ namespace Microsoft.Xna.Framework.Graphics
                 // to sleep until the next VSync. This ensures we don't waste any cycles rendering
                 // frames that will never be displayed to the screen.
                 lock (_d3dContext)
-                    _swapChain.Present(1, PresentFlags.None, parameters);
+                {
+                    if (_swapChain != null)
+                        _swapChain.Present(1, PresentFlags.None, parameters);
+                    else if (UAPGameWindow.Instance.IsHolographic)
+                    {
+                        var frame = UAPGameWindow.Instance.Game.graphicsDeviceManager.HolographicFrame;
+                        if(frame != null)
+                            frame.PresentUsingCurrentPrediction(Windows.Graphics.Holographic.HolographicFramePresentWaitBehavior.WaitForFrameToFinish);
+                    }
+                }
             }
             catch (SharpDX.SharpDXException)
             {

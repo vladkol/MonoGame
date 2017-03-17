@@ -109,33 +109,27 @@ namespace HolographicSmokeTest
         {
             var launchArguments = string.Empty;
 
-            if (holographicSpace != null)
-            {
-                int shiftPos = sizeof(uint);
-                ulong id = (ulong)holographicSpace.PrimaryAdapterId.LowPart | (((ulong)holographicSpace.PrimaryAdapterId.HighPart) << shiftPos);
-                launchArguments = string.Format("HolographicAdapter={0}", id);
-            }
+            _game = MonoGame.Framework.UWPGame<Game1>.Create(launchArguments, window, holographicSpace);
+            _game.Run(Microsoft.Xna.Framework.GameRunBehavior.Synchronous);
 
-            _game = MonoGame.Framework.UWPGame<Game1>.Create(launchArguments, window, true);
+        //    while (!windowClosed)
+        //    {
+        //        if (windowVisible)// && (null != holographicSpace))
+        //        {
+        //            CoreWindow.GetForCurrentThread().Dispatcher.ProcessEvents(CoreProcessEventsOption.ProcessAllIfPresent);
 
-            while (!windowClosed)
-            {
-                if (windowVisible && (null != holographicSpace))
-                {
-                    CoreWindow.GetForCurrentThread().Dispatcher.ProcessEvents(CoreProcessEventsOption.ProcessAllIfPresent);
-                    
-                    //HolographicFrame frame = main.Update();
+        //            HolographicFrame frame = main.Update();
 
-                    //if (main.Render(ref frame))
-                    //{
-                    //    deviceResources.Present(ref frame);
-                    //}
-                }
-                else
-                {
-                    CoreWindow.GetForCurrentThread().Dispatcher.ProcessEvents(CoreProcessEventsOption.ProcessOneAndAllPending);
-                }
-            }
+        //            if (main.Render(ref frame))
+        //            {
+        //                deviceResources.Present(ref frame);
+        //            }
+        //        }
+        //        else
+        //        {
+        //            CoreWindow.GetForCurrentThread().Dispatcher.ProcessEvents(CoreProcessEventsOption.ProcessOneAndAllPending);
+        //        }
+        //    }
         }
 
         /// <summary>
